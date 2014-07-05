@@ -132,8 +132,6 @@ readPlinkLinear <- function(filename, h=TRUE)
 	return(a)
 }
 
-a <- readPlinkLinear("aar0.txt.assoc.linear.add.gz", FALSE)
-
 
 
 ##########
