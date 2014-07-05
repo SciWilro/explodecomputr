@@ -149,16 +149,16 @@ readPlinkLinear <- function(filename, h=TRUE)
 #'
 #' @export
 #' @return
-qqplotpval <- function(gwas, filename=NULL)
+qqplotpval <- function(P, filename=NULL)
 {
 	require(GenABEL)
-	l <- estlambda(gwas$P, method="median")
+	l <- estlambda(P, method="median")
 	nom <- paste("lambda = ", round(l$estimate, 3), sep="")
 	if(!is.null(filename))
 	{
 		png(filename)
 	}
-	estlambda(gwas$P, method="median", plot=TRUE, main=nom)
+	estlambda(P, method="median", plot=TRUE, main=nom)
 	if(!is.null(filename))
 	{
 		dev.off()
