@@ -42,6 +42,25 @@ readGRM <- function(rootname)
 	return(ret)
 }
 
+#' Write readGRM style output back to binary GRM for use with GCTA
+#'
+#' @param grm Output from \link{readGRM}
+#' @param rootname
+#' @export
+writeGRM <- function(grm, rootname)
+{
+	bin.file.name <- paste(rootname, ".grm.bin", sep="")
+	n.file.name <- paste(rootname, ".grm.N.bin", sep="")
+	id.file.name <- paste(rootname, ".grm.id", sep="")
+	write.table(grm$id, id.file.name, row=F, col=F, qu=F)
+	n <- dim(id)[1]
+	bin.file <- file(bin.file.name, "wb")
+	writeBin(grm$grm$grm, bin.file, size=4)
+	close(bin.file)
+	n.file <- file(n.file.name, "wb")
+	writeBin(grm$grm$N, n.file, size=4)
+	close(n.file)
+}
 
 #' Check if files exist
 #'
@@ -140,15 +159,15 @@ readPlinkLinear <- function(filename, h=TRUE)
 
 
 
-#' <brief desc>
+#' QQ plot pvalues
 #'
-#' <full description>
+#' Creates a qq plot using GenABEL's function. Calculates lambda and prints to title
 #'
-#' @param gwas <what param does>
-#' @param  filename=NULL <what param does>
+#' @param P array of pvalues
+#' @param filename=NULL If specified the plot will be printed to png
 #'
 #' @export
-#' @return
+#' @return NULL
 qqplotpval <- function(P, filename=NULL)
 {
 	require(GenABEL)
@@ -165,3 +184,42 @@ qqplotpval <- function(P, filename=NULL)
 	}
 }
 
+
+
+#' Manhattan Plot
+#'
+#' @param p P values
+#' @param  chr Chromosomes (won't handle X, must not be factors)
+#' @param  pos Physical position
+#' @param  filename=NULL If specified will print to file
+#' @param  width=15
+#' @param  height=7
+#' @param  threshold=-log10(0.05/1000000) For thresholds
+#'
+#' @export
+#' @return NULL
+manhattanPlot <- function(p, chr, pos, filename=NULL, width=15, height=7, threshold=-log10(0.05/1000000))
+{
+	require(ggplot2)
+	dat <- data.frame(chrom=as.numeric(chr), bp=pos, pval=-log10(p))
+	dat <- dat[order(dat$chrom, dat$bp), ]
+	dat$col <- dat$chr %% 2 + 1
+	dat <- subset(dat, !is.na(pval))
+	
+	pl <- ggplot(dat, aes(x=bp, y=pval)) +
+	geom_point(aes(colour=factor(col))) +
+	facet_grid(. ~ chrom, scale="free_x", space="free_x") +
+	theme(legend.position="none") +
+	scale_colour_manual(values=c("#404040", "#ca0020")) +
+	theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+	ylim(0, max(c(threshold, dat$pval, na.rm=TRUE))) +
+	labs(y=expression(-log[10]*p), x="Position") +
+	geom_hline(yintercept=threshold)
+
+	if(!is.null(filename))
+	{
+		ggsave(filename, pl, width=width, height=height)		
+	} else {
+		print(pl)
+	}
+}
