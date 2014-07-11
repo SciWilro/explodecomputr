@@ -247,3 +247,45 @@ removeOutliersRecursive <- function(x, niter=5, d=3)
 	return(x)
 }
 
+scaleRankTransform <- function(x) 
+{
+	require(GenABEL)
+	s <- sd(x, na.rm=TRUE)
+	m <- mean(x, na.rm=TRUE)
+	x <- rntransform(x) * s + m
+	return(x)
+}
+
+ztransform <- function(x)
+{
+	(x-mean(x, na.rm=TRUE)) / sd(x, na.rm=TRUE)
+}
+
+adjustMeanVariance <- function(y, x, keep.scale=TRUE)
+{
+	require(plyr)
+	s <- sd(y, na.rm=TRUE)
+	m <- mean(y, na.rm=TRUE)
+	d <- data.frame(y=y, x=x, index=1:length(y))
+
+	d <- ddply(d, .(x), mutate, y1 = standardise(y))
+	if(keep.scale)
+	{
+		d$y1 <- d$y1 * s + m
+	}
+	d <- d[order(d$index), ]
+	return(d$y1)
+}
+
+adjustCov <- function(y, x, keep.scale=TRUE)
+{
+	m <- mean(y, na.rm=TRUE)
+	s <- sd(y, na.rm=TRUE)
+	res <- residuals(lm(y ~ x, na.action=na.exclude))
+	if(keep.scale)
+	{
+		res <- res * s + m
+	}
+	return(res)
+}
+
