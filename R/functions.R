@@ -223,3 +223,27 @@ manhattanPlot <- function(p, chr, pos, filename=NULL, width=15, height=7, thresh
 		print(pl)
 	}
 }
+
+
+
+
+
+
+
+#################
+# DATA CLEANING #
+#################
+
+
+removeOutliersRecursive <- function(x, niter=5, d=3)
+{
+	for(i in 1:niter)
+	{
+		s <- sd(x, na.rm=T)
+		m <- mean(x, na.rm=T)
+		index <- x > m + d*s | x < m - d*s
+		x[index] <- NA
+	}
+	return(x)
+}
+
