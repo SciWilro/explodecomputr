@@ -268,7 +268,7 @@ adjustMeanVariance <- function(y, x, keep.scale=TRUE)
 	m <- mean(y, na.rm=TRUE)
 	d <- data.frame(y=y, x=x, index=1:length(y))
 
-	d <- ddply(d, .(x), mutate, y1 = standardise(y))
+	d <- ddply(d, .(x), mutate, y1 = ztransform(y))
 	if(keep.scale)
 	{
 		d$y1 <- d$y1 * s + m
