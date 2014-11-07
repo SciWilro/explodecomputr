@@ -152,6 +152,26 @@ readPlinkLinear <- function(filename, h=TRUE)
 }
 
 
+#' Read GCTA xmat file
+#'
+#' @param filename
+#'
+#' @export
+#' @return list
+readGctaXmat <- function(filename)
+{
+        a <- read.table(filename, colClass="character")
+        snps <- as.character(a[1,-c(1:2)])
+        ids <- a[-c(1:2), 1:2]
+        alleles <- as.character(a[2,-c(1:2)])
+        xmat <- matrix(as.numeric(as.matrix(a[-c(1,2), -c(1,2)])), nrow(a)-2, ncol(a)-2)
+        ids <- data.frame(a)
+        names(ids) <- c("FID", "IID")
+        snps <- data.frame(snp=snps, allele=alleles)
+        return(list(xmat=xmat, snps=snps, ids=ids))
+}
+
+
 
 ##########
 # GRAPHS #
