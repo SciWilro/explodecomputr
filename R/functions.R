@@ -128,7 +128,7 @@ readBim <- function(rootname)
 readFam <- function(rootname)
 {
 	nom <- checkRootname(rootname, "plink", "fam")
-	fam <- read.table(nom, colClasses=c("character", "character", "numeric", "numeric", "character", "character"))
+	fam <- read.table(nom, colClasses=c("character", "character", "character", "character", "character", "character"))
 	names(fam) <- c("FID", "IID", "FATHER", "MOTHER", "SEX", "PHEN")
 	return(fam)	
 }
