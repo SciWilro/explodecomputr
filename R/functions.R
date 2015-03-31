@@ -42,6 +42,24 @@ readGRM <- function(rootname)
 	return(ret)
 }
 
+
+#' Convert long GRM format to matrix format
+#'
+#' @param grm Result from readGRM
+#' @export
+#' @return Matrix of n x n
+makeGRMmatrix <- function(grm)
+{
+	mat <- diag(nrow(grm$id))
+	mat[upper.tri(mat, diag=TRUE)] <- grm$grm$grm
+	mat <- t(mat)
+	nsnpvec <- subset(grm$grm, id1 != id2)$N
+	mat[upper.tri(mat, diag=FALSE)] <- nsnpvec
+	return(mat)
+}
+
+
+
 #' Write readGRM style output back to binary GRM for use with GCTA
 #'
 #' @param grm Output from \link{readGRM}
