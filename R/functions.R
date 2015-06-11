@@ -71,7 +71,7 @@ writeGRM <- function(grm, rootname)
 	n.file.name <- paste(rootname, ".grm.N.bin", sep="")
 	id.file.name <- paste(rootname, ".grm.id", sep="")
 	write.table(grm$id, id.file.name, row=F, col=F, qu=F)
-	n <- dim(id)[1]
+	n <- dim(grm$id)[1]
 	bin.file <- file(bin.file.name, "wb")
 	writeBin(grm$grm$grm, bin.file, size=4)
 	close(bin.file)
