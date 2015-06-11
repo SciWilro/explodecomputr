@@ -172,6 +172,17 @@ readGctaXmat <- function(filename)
 }
 
 
+read_plink_raw <- function(filename)
+{
+	a <- read.table(filename, he=T, colClass="character", stringsAsFactors=FALSE)
+	snps <- names(a[-c(1:6)])
+	snps <- data.frame(do.call(rbind, strsplit(snps, split="_")))
+	names(snps) <- c("SNP", "REF_ALLELE")
+	ids <- a[, 1:6]
+	xmat <- matrix(as.numeric(as.matrix(a[, -c(1:6)])), nrow(a))	
+	return(list(xmat=xmat, snps=snps, ids=ids))
+}
+
 
 ##########
 # GRAPHS #
