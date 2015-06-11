@@ -42,6 +42,24 @@ readGRM <- function(rootname)
 	return(ret)
 }
 
+
+#' Convert long GRM format to matrix format
+#'
+#' @param grm Result from readGRM
+#' @export
+#' @return Matrix of n x n
+makeGRMmatrix <- function(grm)
+{
+	mat <- diag(nrow(grm$id))
+	mat[upper.tri(mat, diag=TRUE)] <- grm$grm$grm
+	mat <- t(mat)
+	nsnpvec <- subset(grm$grm, id1 != id2)$N
+	mat[upper.tri(mat, diag=FALSE)] <- nsnpvec
+	return(mat)
+}
+
+
+
 #' Write readGRM style output back to binary GRM for use with GCTA
 #'
 #' @param grm Output from \link{readGRM}
@@ -53,7 +71,7 @@ writeGRM <- function(grm, rootname)
 	n.file.name <- paste(rootname, ".grm.N.bin", sep="")
 	id.file.name <- paste(rootname, ".grm.id", sep="")
 	write.table(grm$id, id.file.name, row=F, col=F, qu=F)
-	n <- dim(id)[1]
+	n <- dim(grm$id)[1]
 	bin.file <- file(bin.file.name, "wb")
 	writeBin(grm$grm$grm, bin.file, size=4)
 	close(bin.file)
@@ -128,7 +146,7 @@ readBim <- function(rootname)
 readFam <- function(rootname)
 {
 	nom <- checkRootname(rootname, "plink", "fam")
-	fam <- read.table(nom, colClasses=c("character", "character", "numeric", "numeric", "character", "character"))
+	fam <- read.table(nom, colClasses=c("character", "character", "character", "character", "character", "character"))
 	names(fam) <- c("FID", "IID", "FATHER", "MOTHER", "SEX", "PHEN")
 	return(fam)	
 }
