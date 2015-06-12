@@ -203,6 +203,42 @@ read_plink_raw <- function(filename)
 	return(list(xmat=xmat, snps=snps, ids=ids))
 }
 
+
+read_hsq <- function(filename, label=NULL)
+{
+        require(reshape2)
+        require(plyr)
+        if(!file.exists(filename))
+        {
+                filename <- paste(filename, ".hsq", sep="")
+                stopifnot(file.exists(filename))
+        }
+        a <- readLines(filename)
+        ncomp <- (length(a) - 5) / 2
+        b <- read.table(filename, header=T, nrows=ncomp*2+2, stringsAsFactors=FALSE)
+        variances <- melt(b[1:(ncomp),], measure.vars=c("Variance", "SE"))
+        variances$label <- label
+        variances$type <- "vg"
+        vp <- melt(b[(ncomp+2),], measure.vars=c("Variance", "SE"))
+        vp$label <- label
+        vp$type <- "vp"
+        ve <- melt(b[(ncomp+1),], measure.vars=c("Variance", "SE"))
+        ve$label <- label
+        ve$type <- "ve"
+        hsq <- melt(b[(ncomp+3):nrow(b), ], measure.vars=c("Variance", "SE"))
+        hsq$label <- label
+        hsq$type <- "hsq"
+        c <- read.table(filename, h=F, skip=ncomp*2+3, stringsAsFactors=FALSE)
+        names(c) <- c("variable", "value")
+        c$Source <- "details"
+        c$label <- label
+        c <- rbind(c, c[1,])
+        c$variable[1] <- "ncomp"
+        c$value[1] <- ncomp
+        c$type <- "details"
+        return(rbind.fill(list(variances, vp, ve=ve, hsq, c)))
+}
+
 ##########
 # GRAPHS #
 ##########
