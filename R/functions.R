@@ -73,7 +73,7 @@ writeGRM <- function(grm, rootname)
 	n.file.name <- paste(rootname, ".grm.N.bin", sep="")
 	id.file.name <- paste(rootname, ".grm.id", sep="")
 	write.table(grm$id, id.file.name, row=F, col=F, qu=F)
-	n <- dim(id)[1]
+	n <- dim(grm$id)[1]
 	bin.file <- file(bin.file.name, "wb")
 	writeBin(grm$grm$grm, bin.file, size=4)
 	close(bin.file)
@@ -192,16 +192,16 @@ readGctaXmat <- function(filename)
 }
 
 
-readPlinkA <- function(filename)
+read_plink_raw <- function(filename)
 {
-	a <- read.table(filename, he=T, stringsAsFactors=FALSE)
-	fam <- a[,1:6]
-	xmat <- a[,-c(1:6)]
-	bim <- as.data.frame(do.call(rbind, strsplit(names(xmat), split="_")))
-	return(list(x=xmat, fam=fam, bim=bim))
+	a <- read.table(filename, he=T, colClass="character", stringsAsFactors=FALSE)
+	snps <- names(a[-c(1:6)])
+	snps <- data.frame(do.call(rbind, strsplit(snps, split="_")))
+	names(snps) <- c("SNP", "REF_ALLELE")
+	ids <- a[, 1:6]
+	xmat <- matrix(as.numeric(as.matrix(a[, -c(1:6)])), nrow(a))	
+	return(list(xmat=xmat, snps=snps, ids=ids))
 }
-
-
 
 ##########
 # GRAPHS #
