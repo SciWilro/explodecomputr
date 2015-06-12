@@ -55,6 +55,8 @@ makeGRMmatrix <- function(grm)
 	mat <- t(mat)
 	nsnpvec <- subset(grm$grm, id1 != id2)$N
 	mat[upper.tri(mat, diag=FALSE)] <- nsnpvec
+	rownames(mat) <- grm$id$V2
+	colnames(mat) <- grm$id$V2
 	return(mat)
 }
 
@@ -187,6 +189,16 @@ readGctaXmat <- function(filename)
         names(ids) <- c("FID", "IID")
         snps <- data.frame(snp=snps, allele=alleles)
         return(list(xmat=xmat, snps=snps, ids=ids))
+}
+
+
+readPlinkA <- function(filename)
+{
+	a <- read.table(filename, he=T, stringsAsFactors=FALSE)
+	fam <- a[,1:6]
+	xmat <- a[,-c(1:6)]
+	bim <- as.data.frame(do.call(rbind, strsplit(names(xmat), split="_")))
+	return(list(x=xmat, fam=fam, bim=bim))
 }
 
 
