@@ -1,59 +1,84 @@
 #' Egger's regression for Mendelian randomisation
 #'
-#' 
-#'
-#' @param b_exp <what param does>
-#' @param  b_out <what param does>
-#' @param  se_exp <what param does>
-#' @param  se_out <what param does>
+#' @param b_exp Vector of genetic effects on exposure
+#' @param b_out Vector of genetic effects on outcome
+#' @param se_exp Standard errors of genetic effects on exposure
+#' @param se_out Standard errors of genetic effects on outcome
+#' @param bootstrap=NULL Number of bootstraps to estimate standard error. If NULL then don't use bootstrap
 #'
 #' @export
-#' @return
-eggers_regression <- function(b_exp, b_out, se_exp, se_out)
+#' @return List of results from MR Egger
+eggers_regression <- function(b_exp, b_out, se_exp, se_out, bootstrap=NULL)
 {
 	stopifnot(length(b_exp) == length(b_out))
 	stopifnot(length(se_exp) == length(se_out))
 	stopifnot(length(b_exp) == length(se_out))
-	b_out = b_out*sign(b_exp)
+
+	sign0 <- function(x)
+	{
+		x[x==0] <- 1
+		return(sign(x))
+	}
+
+	to_flip <- sign0(b_exp) == -1
+	b_out = b_out*sign0(b_exp)
 	b_exp = abs(b_exp) 
-	dat <- data.frame(b_out=b_out, b_exp=b_exp, se_exp=se_exp, se_out=se_out)	
+	dat <- data.frame(b_out=b_out, b_exp=b_exp, se_exp=se_exp, se_out=se_out, flipped=to_flip)
 	mod <- lm(b_out ~ b_exp, weights=1/se_out^2)
 	smod <- summary(mod)
-	tab <- coefficients(smod)
-	rownames(tab)[2] <- paste(xlab, "on", ylab)
-	return(list(mod = smod, dat = dat))
+
+	b <- coefficients(smod)[2,1]
+	se <- coefficients(smod)[2,2]
+	pval <- coefficients(smod)[2,4]
+	b_i <- coefficients(smod)[1,1]
+	se_i <- coefficients(smod)[1,2]
+	pval_i <- coefficients(smod)[1,4]
+
+	if(!is.null(bootstrap))
+	{
+		boots <- eggers_regression_bootstrap(b_exp, b_out, se_exp, se_out, bootstrap)
+		se <- boots$boots$se[boots$boots$param == "slope" & boots$boots$stat == "b" & boots$boots$what == "bootstrap"]
+		se_i <- boots$boots$se[boots$boots$param == "intercept" & boots$boots$stat == "b" & boots$boots$what == "bootstrap"]
+	}
+	return(list(b = b, se = se, pval = pval, b_i = b_i, se_i = se_i, pval_i = pval_i, mod = smod, dat = dat))
 }
+
 
 plot_eggers_regression <- function(b_exp, b_out, se_exp, se_out, ylab = "Gene-outcome", xlab = "Gene-exposure")
 {
 	require(ggplot2)
 	er <- eggers_regression(b_exp, b_out, se_exp, se_out)
-	reg <- data.frame(a = coefficients(er$smod)[1,1], b = coefficients(er$mod)[2,1])
+	reg <- data.frame(a = coefficients(er$mod)[1,1], b = coefficients(er$mod)[2,1])
 
 	p <- ggplot(er$dat, aes(y = b_out, x = b_exp)) +
 		geom_errorbar(aes(ymax = b_out + se_out, ymin = b_out - se_out), width=0, colour="grey") +
 		geom_errorbarh(aes(xmax = b_exp + se_exp, xmin = b_exp - se_exp), height=0, colour="grey") +
-		geom_point() +
-		geom_abline(data=reg, aes(intercept = a, slope = b)) +
-		labs(y = ylab, x = xlab)
+		geom_point(aes(colour=flipped)) +
+		geom_abline(data=reg, aes(intercept = a, slope = b))
+		labs(y = ylab, x = xlab, colour = "Exposure\nsign flipped")
 	return(p)
 }
 
-eggers_regression_bootstrap <- function(x,y,xse,yse,n){
+eggers_regression_bootstrap <- function(b_exp, b_out, se_exp, se_out, nboot)
+{
+	require(reshape2)
+	require(plyr)
 	# Do bootstraps
 	res <- array(0, c(n+1, 4))
-	for (i in 1:n)
+	pb <- txtProgressBar(min = 0, max = nboot, initial = 0, style=3) 
+	for (i in 1:nboot)
 	{
+		setTxtProgressBar(pb, i)
 		#sample from distributions of SNP betas
-		xs <- rnorm(length(x),x,xse)
-		ys <- rnorm(length(y),y,yse)
+		xs <- rnorm(length(b_exp),b_exp,se_exp)
+		ys <- rnorm(length(b_out),b_out,se_out)
 
 		# Use absolute values for Egger reg
 		ys <- ys*sign(xs)
 		xs <- abs(xs)
 
 		#weighted regression with given formula
-		r <- summary(lm(ys ~ xs, weights=1/yse^2))
+		r <- summary(lm(ys ~ xs, weights=1/se_out^2))
 
 		#collect coefficient from given line.
 		res[i, 1] <- r$coefficients[1,1]
@@ -61,19 +86,48 @@ eggers_regression_bootstrap <- function(x,y,xse,yse,n){
 		res[i, 3] <- r$coefficients[2,1]
 		res[i, 4] <- r$coefficients[2,2]
 	}
+	cat("\n")
 
 	# Run original analysis
-	y <- y*sign(x)
-	x <- abs(x)
-	dat <- data.frame(y, x, yse, xse)
-	orig <- coefficients(summary(lm(y ~ x, weights=1/yse^2)))
+	b_out <- b_out*sign(b_exp)
+	b_exp <- abs(b_exp)
+	dat <- data.frame(b_out, b_exp, se_out, se_exp)
+	orig <- coefficients(summary(lm(b_out ~ b_exp, weights=1/se_out^2)))
 	res[n+1, ] <- c(orig[1,1], orig[1,2], orig[2,1], orig[2,2])
 	res <- as.data.frame(res)
 	res$what <- "bootstrap"
 	res$what[n+1] <- "original"
-	return(list(res, dat))
+
+	datl <- melt(res, measure.vars=c("V1", "V2", "V3", "V4"))
+	datl$param <- "slope"
+	datl$param[datl$variable %in% c("V1", "V2")] <- "intercept"
+	datl$stat <- "b"
+	datl$stat[datl$variable %in% c("V2", "V4")] <- "se"
+
+	qu <- ddply(datl, .(param, stat, what), summarise, 
+		m=mean(value),
+		se=sd(value),
+		q05=quantile(value, 0.05),
+		q95=quantile(value, 0.95),
+		pval=sum(value < 0)/length(value))
+
+	res <- as.data.frame(res)
+	names(res) <- c("b_i", "se_i", "b", "se")
+
+	return(list(boots=qu, res=res, data=dat))
 }
 
+
+#' Perform 2 sample IV
+#'
+#' @param b_exp Vector of genetic effects on exposure
+#' @param b_out Vector of genetic effects on outcome
+#' @param se_exp Standard errors of genetic effects on exposure
+#' @param se_out Standard errors of genetic effects on outcome
+#' @param n=10000 Sample size
+#'
+#' @export
+#' @return List of results from 2 sample IV
 two_sample_iv_ml <- function(b_exp, b_out, se_exp, se_out, n=10000)
 {
 	loglikelihood <- function(param) {
@@ -89,4 +143,19 @@ two_sample_iv_ml <- function(b_exp, b_out, se_exp, se_out, n=10000)
 	se <- sqrt(solve(opt$hessian)[length(b_exp)+1,length(b_exp)+1])
 	pval <- pt(abs(b) / se, df = n, low=FALSE)
 	return(list(b=b, se=se, pval=pval))
+}
+
+
+#' Get the summary stats for use in 2 sample MR
+#'
+#' @param y vector of dependant variable
+#' @param x matrix of independent variables
+#'
+#' @export
+#' @return data frame of effects and standard errors
+get_summary_stats <- function(y, x)
+{
+	mod <- as.data.frame(coefficients(summary(lm(y ~ x)))[-1,])
+	names(mod) <- c("b", "se", "tval", "pval")
+	as.data.frame(mod)
 }
