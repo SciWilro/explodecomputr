@@ -112,15 +112,20 @@ two_sample_iv_ml(gx$b, gy$b, gx$se, gy$se)
 
 
 
-nsim <- 250
-res <- expand.grid(sim=1:nsim, er_b = NA, er_i = NA, tsiv = NA)
-g <- make_geno(5000, rep(0.5, 30))
 
+
+
+
+nsim <- 500
+res <- expand.grid(sim=1:nsim, n=c(50000, 100000), er_b = NA, er_i = NA, tsiv = NA)
+
+pb <- txtProgressBar(min = 0, max = nrow(res), initial = 0, style=3)
 for(i in 1:nrow(res))
 {
-	cat(i, "\n")
+	setTxtProgressBar(pb, i)
 	eff <- runif(ncol(g), max=0.04, min=-0.04)
 	r <- runif(1, max=0.5, min=-0.5)
+	g <- make_geno(res$n[i], rep(0.5, 30))
 	x <- make_phen(eff, g)
 	y <- make_phen(r, x)
 	gy <- get_summary_stats(y, g)
@@ -137,10 +142,34 @@ plot(er_b ~ tsiv, res)
 plot(er_i ~ tsiv, res)
 plot(er_i ~ er_b, res)
 
-
+with(res, cor(er_b, tsiv))
+with(res, cor(er_i, tsiv))
+with(res, cor(er_i, er_b))
 
 er2 <- eggers_regression(gx$b, gy$b, gx$se, gy$se, 1000)
 er <- eggers_regression(gx$b, gy$b, gx$se, gy$se)
 
 er$se
 er2$se
+
+
+ddply(res, .(n), summarise, a = cor(er_b, er_i))
+
+
+
+res10000 <- res
+
+
+a <- list()
+for(i in 1:500)
+{
+	cat(i,"\n")
+	x <- rnorm(10000)
+	y <- rnorm(1)*x + rnorm(10000)*10
+	a[[i]] <- coefficients(lm(y ~ x))
+}
+
+a <- do.call(rbind, a)
+summary(lm(a[,1] ~ a[,2]))
+
+plot(a)
