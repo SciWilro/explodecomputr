@@ -7,7 +7,7 @@
 #'
 #' @export
 #' @return Expected standard error of b
-est_se <- function(b, n, vx, vy)
+expected_se_of_beta <- function(b, n, vx, vy)
 {
 	r <- b * vx / (sqrt(vx) * sqrt(vy))
 	adjusted_r2 <- 1 - (n-1)/(n-2) * (1 - r^2)
