@@ -118,44 +118,40 @@ eggers_regression_bootstrap <- function(b_exp, b_out, se_exp, se_out, nboot)
 }
 
 
-#' Perform 2 sample IV
+#' Perform 2 sample IV 
 #'
 #' @param b_exp Vector of genetic effects on exposure
 #' @param b_out Vector of genetic effects on outcome
 #' @param se_exp Standard errors of genetic effects on exposure
 #' @param se_out Standard errors of genetic effects on outcome
 #' @param n=10000 Sample size
+#' @param method Use "standard" method (default) or "ml"
 #'
 #' @export
 #' @return List of results from 2 sample IV
-two_sample_iv_ml <- function(b_exp, b_out, se_exp, se_out, n=10000)
+two_sample_iv <- function(b_exp, b_out, se_exp, se_out, n=10000, method="standard")
 {
-	loglikelihood <- function(param) {
-		return(1/2*sum((b_exp-param[1:length(b_exp)])^2/se_exp^2)+1/2*sum((b_out-param[length(b_exp)+1]*param[1:length(b_exp)])^2/se_out^2))
-	}
-	opt <- optim(
-		c(b_exp, sum(b_exp*b_out/se_out^2)/sum(b_exp^2/se_out^2)),
-		loglikelihood, 
-		hessian=TRUE, 
-		control = list(maxit=25000))
+	if(method == "standard")
+	{
+		b <- sum(b_exp*b_out / se_out^2) / sum(b_exp^2/se_out^2)
+		se <- sqrt(1 / sum(b_exp^2/se_out^2))
+		pval <- pt(abs(b) / se, df = n, low=FALSE)		
+	} else if (method == "ml") {
+		loglikelihood <- function(param) {
+			return(1/2*sum((b_exp-param[1:length(b_exp)])^2/se_exp^2)+1/2*sum((b_out-param[length(b_exp)+1]*param[1:length(b_exp)])^2/se_out^2))
+		}
+		opt <- optim(
+			c(b_exp, sum(b_exp*b_out/se_out^2)/sum(b_exp^2/se_out^2)),
+			loglikelihood, 
+			hessian=TRUE, 
+			control = list(maxit=25000))
 
-	b <- opt$par[length(b_exp)+1]
-	se <- sqrt(solve(opt$hessian)[length(b_exp)+1,length(b_exp)+1])
-	pval <- pt(abs(b) / se, df = n, low=FALSE)
+		b <- opt$par[length(b_exp)+1]
+		se <- sqrt(solve(opt$hessian)[length(b_exp)+1,length(b_exp)+1])
+		pval <- pt(abs(b) / se, df = n, low=FALSE)
+	} else {
+		stop("Must specify standard or ml for method")
+	}
 	return(list(b=b, se=se, pval=pval))
 }
 
-
-#' Get the summary stats for use in 2 sample MR
-#'
-#' @param y vector of dependant variable
-#' @param x matrix of independent variables
-#'
-#' @export
-#' @return data frame of effects and standard errors
-get_summary_stats <- function(y, x)
-{
-	mod <- as.data.frame(coefficients(summary(lm(y ~ x)))[-1,])
-	names(mod) <- c("b", "se", "tval", "pval")
-	as.data.frame(mod)
-}
