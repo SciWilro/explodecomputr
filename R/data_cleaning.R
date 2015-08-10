@@ -95,3 +95,23 @@ get_residuals <- function(formula, data, keep.scale=TRUE, ...)
 	return(res)
 }
 
+
+#' Winsorize a vector
+#'
+#' For a numeric vector, move values below and above the q and 1-q
+#'   quantiles to those quantiles.
+#'
+#' @param x Numeric vector
+#' @param q Lower quantile to use
+#' @export
+#' @return
+#' A vector like the input \code{x}, but with extreme values moved in to
+#'   the \code{q} and \code{1-q} quantiles.
+winsorize <- function(x, q=0.006)
+{
+	extr <- stats::quantile(x, c(q, 1-q), na.rm=TRUE)
+	if(diff(extr) < 0) extr <- rev(extr)
+	x[!is.na(x) & x < extr[1]] <- extr[1]
+	x[!is.na(x) & x > extr[2]] <- extr[2]
+	return(x)
+}
