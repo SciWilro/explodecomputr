@@ -1,0 +1,13 @@
+Package: explodecomputr
+Title: A personal library
+Version: 0.1
+Authors@R: person("Gibran", "Hemani", email = "explodecomputer@gmail.com",
+                  role = c("aut", "cre"))
+Description: Various functions used over and over again
+Depends: R (>= 3.1.0)
+Imports: 
+  plyr,
+  ggplot2,
+  reshape2
+License: Creative Commons Attribution CC BY
+LazyData: true
